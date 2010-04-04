@@ -1,7 +1,20 @@
 -module(grak_setup).
--export([global_opts/1, ensure_setup/1]).
+-export([run/1, global_opts/1, ensure_setup/1]).
 -include("grak.hrl").
 
+run(Opts) ->
+    case get(has_set_run) of
+        true -> ok;
+        _ ->
+            GOpts = grak_setup:global_opts(Opts),
+            ok = grak_setup:ensure_setup(GOpts),
+            put(verbose, proplists:get_value(verbose, GOpts, false)),
+            put(build_dir, proplists:get_value(build_dir, GOpts)),
+            put(install_dir, proplists:get_value(install_dir, GOpts)),
+            put(spec_dirs, proplists:get_all_values(spec_dir, GOpts)),
+            put(has_setup_run, true)
+    end.
+    
 global_opts(CmdLineOpts) ->
     ConfigVals = grak_util:config_file(),
     global_opts(CmdLineOpts, ConfigVals).
@@ -19,6 +32,9 @@ global_opts([{Key, Val}|Tail], ConfigVals) ->
     global_opts(Tail, ConfigVals1).
     
 ensure_setup(Opts) ->
+    inets:start(),
+    error_logger:tty(false),
+    
     case proplists:get_value(build_dir, Opts) of
         undefined -> ?EXIT(".grakconfig file is missing a build_dir parameter", []);
         BuildDir -> ensure_dir(BuildDir)
