@@ -3,6 +3,5 @@
 {[ 'src/*' ], 
  [ {i, "include"},
    {outdir, "ebin"},
-   debug_info,
-   {d, 'APP_VSN', "0.0"} ]
+   debug_info ]
 }.

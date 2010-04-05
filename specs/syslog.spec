@@ -1,0 +1,1 @@
+{url, "http://github.com/JacobVorreuter/erlang_syslog/tarball/master"}.

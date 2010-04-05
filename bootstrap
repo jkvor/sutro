@@ -5,9 +5,7 @@
 
 %% shamelessly stolen from rebar
 main(Args) ->
-    %% Get a string repr of build time
-    Built = build_time(),
-
+    
     %% Check for force=1 flag to force a rebuild
     case lists:member("force=1", Args) of
         true ->
@@ -19,11 +17,11 @@ main(Args) ->
     
     AppVsn =
         %% Make sure file:consult can parse the .app file
-        case file:consult("ebin/grackle.app") of
+        case file:consult("ebin/sutro.app") of
             {ok,[{_,_,Props}]} ->
                 proplists:get_value(vsn, Props);
             {error, Reason} ->
-                io:format("Invalid syntax in ebin/grackle.app: ~p\n", [Reason]),
+                io:format("Invalid syntax in ebin/sutro.app: ~p\n", [Reason]),
                 halt(1)
         end,
         
@@ -50,28 +48,23 @@ main(Args) ->
     case zip:create("mem", Files, [{cwd, "ebin"}, memory]) of
         {ok, {"mem", ZipBin}} ->
             %% Archive was successfully created. Prefix that binary with our
-            %% header and write to "grackle" file
+            %% header and write to "sutro" file
             Script = <<"#!/usr/bin/env escript\n", ZipBin/binary>>,
-            case file:write_file("grak", Script) of
+            case file:write_file("sutro", Script) of
                 ok ->
                     ok;
                 {error, WriteError} ->
-                    io:format("Failed to write grak script: ~p\n", [WriteError]),
+                    io:format("Failed to write sutro script: ~p\n", [WriteError]),
                     halt(1)
             end;
         {error, ZipError} ->
-            io:format("Failed to construct grak script archive: ~p\n", [ZipError]),
+            io:format("Failed to construct sutro script archive: ~p\n", [ZipError]),
             halt(1)
     end,
 
     %% Finally, update executable perms for our script
-    file:write_file_info("grak", #file_info{mode=(8#00700)}),
+    file:write_file_info("sutro", #file_info{mode=(8#00700)}),
 
     %% Add a helpful message
-    io:format("Successfully generated a grak executable in the current working directory~n").
+    io:format("Successfully generated a sutro executable in the current working directory~n").
                 
-build_time() ->
-    {{Y, M, D}, {H, Min, S}} = calendar:now_to_universal_time(now()),
-    lists:flatten(io_lib:format("~4..0w~2..0w~2..0w_~2..0w~2..0w~2..0w", [Y, M, D, H, Min, S])).
-            
-

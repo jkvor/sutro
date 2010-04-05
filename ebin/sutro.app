@@ -1,10 +1,10 @@
-{application, grackle,
+{application, sutro,
  [{description, "An Erlang package manager"},
   {vsn, "0.1.0"},
-  {modules, [ grak,
-			  grak_api,
-			  grak_setup,
-              grak_util
+  {modules, [ sutro,
+			  sutro_api,
+			  sutro_setup,
+              sutro_util
   ]},
   {registered, []},
   {applications, [kernel, stdlib, sasl]}

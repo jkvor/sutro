@@ -1,31 +1,31 @@
 ## Install
 	
-global config: ~/.grakconfig
-build directory: ~/.grackle/tmp
-install directory: ~/.grackle/lib
-default spec location: ~/.grackle/specs
+global config: ~/.sutroconfig
+build directory: ~/.sutro/tmp
+install directory: ~/.sutro/lib
+default spec location: ~/.sutro/specs
 
 ## Config
 
-~/.grakconfig:
+~/.sutroconfig:
 	
-	{build_dir, "/Users/jkvor/.grackle/tmp"}.
-	{install_dir, "/Users/jkvor/.grackle/lib"}.
+	{build_dir, "/Users/jkvor/.sutro/tmp"}.
+	{install_dir, "/Users/jkvor/.sutro/lib"}.
 	{spec_dir, "/Users/jkvor/specs"}.
-	{spec_dir, "/Users/jkvor/.grackle/specs"}.
+	{spec_dir, "/Users/jkvor/.sutro/specs"}.
 
 ## Commands
 
-	grak search emongo
-	grak install emongo
-	grak update emongo
-	grak uninstall emongo
-	grak list
-	grak help
+	sutro search emongo
+	sutro install emongo
+	sutro update emongo
+	sutro uninstall emongo
+	sutro list
+	sutro help
 	
 ## Spec file
 
-emongo.grak:
+emongo.sutro:
 
 	{url, "http://github.com/JacobVorreuter/emongo/tarball/v0.2"}.
 	{deps, [etap]}.

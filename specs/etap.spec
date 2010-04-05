@@ -1,1 +1,1 @@
-{url, "http://github.com/ngerakines/etap/archives/0.3.4"}.
+{url, "http://github.com/ngerakines/etap/tarball/master"}.

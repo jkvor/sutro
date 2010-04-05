@@ -1,13 +1,13 @@
--module(grak_setup).
+-module(sutro_setup).
 -export([run/1, global_opts/1, ensure_setup/1]).
--include("grak.hrl").
+-include("sutro.hrl").
 
 run(Opts) ->
     case get(has_set_run) of
         true -> ok;
         _ ->
-            GOpts = grak_setup:global_opts(Opts),
-            ok = grak_setup:ensure_setup(GOpts),
+            GOpts = sutro_setup:global_opts(Opts),
+            ok = sutro_setup:ensure_setup(GOpts),
             put(verbose, proplists:get_value(verbose, GOpts, false)),
             put(build_dir, proplists:get_value(build_dir, GOpts)),
             put(install_dir, proplists:get_value(install_dir, GOpts)),
@@ -16,19 +16,13 @@ run(Opts) ->
     end.
     
 global_opts(CmdLineOpts) ->
-    ConfigVals = grak_util:config_file(),
+    ConfigVals = sutro_util:config_file(),
     global_opts(CmdLineOpts, ConfigVals).
     
 global_opts([], ConfigVals) -> ConfigVals;
 
 global_opts([{Key, Val}|Tail], ConfigVals) ->
-    ConfigVals1 = 
-        case allowed_multi(Key) of
-            true -> 
-                [{Key, Val}|ConfigVals];
-            false -> 
-                lists:keystore(Key, 1, ConfigVals, {Key, Val})
-        end,
+    ConfigVals1 = sutro_util:add_config(Key, Val, ConfigVals),
     global_opts(Tail, ConfigVals1).
     
 ensure_setup(Opts) ->
@@ -36,24 +30,21 @@ ensure_setup(Opts) ->
     error_logger:tty(false),
     
     case proplists:get_value(build_dir, Opts) of
-        undefined -> ?EXIT(".grakconfig file is missing a build_dir parameter", []);
+        undefined -> ?EXIT(".sutroconfig file is missing a build_dir parameter", []);
         BuildDir -> ensure_dir(BuildDir)
     end,
     
     case proplists:get_value(install_dir, Opts) of
-        undefined -> ?EXIT(".grakconfig file is missing an install_dir parameter", []);
+        undefined -> ?EXIT(".sutroconfig file is missing an install_dir parameter", []);
         InstallDir -> ensure_dir(InstallDir)
     end,
     
     case proplists:get_all_values(spec_dir, Opts) of
-        [] -> ?EXIT(".grakconfig file is missing a spec_dir parameter", []);
+        [] -> ?EXIT(".sutroconfig file is missing a spec_dir parameter", []);
         Specs -> [ensure_dir(SpecDir) || SpecDir <- Specs]
     end, 
     
     ok.
-
-allowed_multi(spec_dir) -> true;
-allowed_multi(_) -> false.
     
 ensure_dir(Dir) ->
     case filelib:ensure_dir(Dir) of

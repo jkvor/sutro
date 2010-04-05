@@ -1,9 +1,9 @@
--module(grak_util).
+-module(sutro_util).
 -compile(export_all).
--include("grak.hrl").
+-include("sutro.hrl").
 
--define(GRACKLE_DIR, ".grackle").
--define(CONFIG_NAME, ".grakconfig").
+-define(GRACKLE_DIR, ".sutro").
+-define(CONFIG_NAME, ".sutroconfig").
 
 home_dir() ->
     case init:get_argument(home) of
@@ -11,20 +11,39 @@ home_dir() ->
 		_ -> ?EXIT("could not access home dir", [])
 	end.
 
+config_path() ->
+    filename:join([home_dir(), ?CONFIG_NAME]).
+    
 config_file() ->
-    ConfigPath = filename:join([home_dir(), ?CONFIG_NAME]),
+    ConfigPath = config_path(),
     case file:consult(ConfigPath) of
         {ok, Props} -> 
             Props;
         {error, enoent} ->
             Defaults = defaults(),
-            {ok, FD} = file:open(ConfigPath, [write]),
-            [io:format(FD, "~p.~n", [Tuple]) || Tuple <- Defaults],
-            file:close(FD),
+            io:format("--> creating config file: ~s~n", [ConfigPath]),
+            io:format("        ~p.~n~n", [Defaults]),
+            write_config(ConfigPath, Defaults),
             Defaults;
         Error -> 
-            ?EXIT("failed to read .grakconfig file: ~p", [Error])
+            ?EXIT("failed to read .sutroconfig file: ~p", [Error])
     end.
+    
+write_config(ConfigPath, Props) ->
+    {ok, FD} = file:open(ConfigPath, [write]),
+    [io:format(FD, "~p.~n", [Tuple]) || Tuple <- Props],
+    file:close(FD).
+    
+add_config(Key, Val, Config) ->
+    case allowed_multi(Key) of
+        true -> 
+            [{Key, Val}|Config];
+        false -> 
+            lists:keystore(Key, 1, Config, {Key, Val})
+    end.
+    
+allowed_multi(spec_dir) -> true;
+allowed_multi(_) -> false.
 
 defaults() ->
     [{build_dir, filename:join([home_dir(), ?GRACKLE_DIR, "tmp"])},
@@ -88,3 +107,6 @@ print_cmd_output(Format, Args, true) ->
 	
 hash_to_uint(Key) -> 
     <<Int:128/unsigned-integer>> = erlang:md5(Key), Int.
+
+format_datetime({{Year, Month, Day}, {Hour, Min, Sec}}) ->    
+    io_lib:format("~4.10.0B-~2.10.0B-~2.10.0B ~2.10.0B:~2.10.0B:~2.10.0B", [Year, Month, Day, Hour, Min, Sec]).
