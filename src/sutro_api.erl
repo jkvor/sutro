@@ -3,8 +3,8 @@
 -include("sutro.hrl").
 
 dispatch(["search" | Args]) ->
-    {SearchStr, Opts} = collect_args(search, Args),
-    Packages = sutro:search(SearchStr, Opts),
+    {SearchStr, _Opts} = collect_args(search, Args),
+    Packages = sutro:search(SearchStr),
     io:format("--> found ~w packages~n", [length(Packages)]),
     [begin
         io:format("--> ~s~n", [PackageName]),
@@ -12,33 +12,43 @@ dispatch(["search" | Args]) ->
     end || {PackageName, Props} <- Packages];
     
 dispatch(["install" | Args]) ->
-    {Packages, Opts} = collect_args(install, Args),
-    sutro:install(Packages, Opts);
+    {Packages, _Opts} = collect_args(install, Args),
+    sutro:install(Packages);
     
 dispatch(["uninstall" | Args]) ->
-    {Packages, Opts} = collect_args(uninstall, Args),
-    sutro:uninstall(Packages, Opts);
+    {Packages, _Opts} = collect_args(uninstall, Args),
+    sutro:uninstall(Packages);
     
 dispatch(["update" | Args]) ->
     {Packages, Opts} = collect_args(update, Args),
     case proplists:get_value(update_system, Opts) of
         true ->
-            sutro:update_sutro(Opts);
+            sutro:update_sutro();
         false ->
-            sutro:update(Packages, Opts)
+            sutro:update(Packages)
     end;
     
 dispatch(["list" | Args]) ->
     {_, Opts} = collect_args(list, Args),
-    Packages = sutro:installed(Opts),
-    io:format("--> ~w package(s) installed~n", [length(Packages)]),
-    [begin
-        io:format("--> ~s~n", [PackageName]),
-        io:format("      version:  ~s~n", [proplists:get_value(app_vsn, Props, "")]),
-        io:format("      date:     ~s~n", [sutro_util:format_datetime(proplists:get_value(date, Props))]),
-        io:format("      source:   ~s~n", [proplists:get_value(url, Props, "")])
-    end || {PackageName, Props} <- Packages];
-
+    case proplists:get_value(available, Opts) of
+        true ->
+            Packages = sutro:available_packages(),
+            io:format("--> ~w package(s) available~n", [length(Packages)]),
+            [begin
+                io:format("--> ~s~n", [PackageName]),
+                io:format("      source:   ~s~n", [proplists:get_value(url, Props, "")])
+            end || {PackageName, Props} <- Packages];
+        _ ->
+            Packages = sutro:installed(),
+            io:format("--> ~w package(s) installed~n", [length(Packages)]),
+            [begin
+                io:format("--> ~s~n", [PackageName]),
+                io:format("      version:  ~s~n", [proplists:get_value(app_vsn, Props, "")]),
+                io:format("      date:     ~s~n", [sutro_util:format_datetime(proplists:get_value(date, Props))]),
+                io:format("      source:   ~s~n", [proplists:get_value(url, Props, "")])
+            end || {PackageName, Props} <- Packages]
+    end;
+    
 dispatch(["config"]) ->
     Props = sutro:get_config(),
     io:format("--> config values~n"),
@@ -53,7 +63,7 @@ dispatch(["config" | Args]) ->
 dispatch(["spec" | Args]) ->
     {_, Opts} = collect_args(spec, Args),
     [begin
-        sutro:add_spec(PackageName, [{url, Url}], Opts)
+        sutro:add_spec(PackageName, [{url, Url}])
     end || {add_spec, [PackageName, Url]} <- Opts];
     
 dispatch(_) ->
@@ -71,7 +81,9 @@ dispatch(_) ->
     io:format("        --verbose~n").
     
 collect_args(Target, Args) ->
-    collect_args(Target, Args, [], []).
+    {Packages, Opts} = collect_args(Target, Args, [], []),
+    sutro_setup:run(Opts),
+    {Packages, Opts}.
     
 collect_args(_, [], Packages, Opts) -> 
     {lists:reverse(Packages), lists:reverse(Opts)};
@@ -100,6 +112,7 @@ collect_args(Target, [Arg | Rest], Packages, Opts) ->
 parse_tag(update, "--system") -> {{update_system, true}, 0};
 parse_tag(config, "--set") -> {config_set, 2};
 parse_tag(spec, "--add") -> {add_spec, 2};
+parse_tag(list, "--available") -> {{available, true}, 0};
 parse_tag(_, "--verbose") -> {{verbose, true}, 0};
 parse_tag(_, "--spec-dir") -> {spec_dir, 1};
 parse_tag(_, "--" ++ Cmd) -> {list_to_atom(Cmd), 1};

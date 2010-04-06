@@ -1,11 +1,13 @@
 -module(sutro).
--export([main/1, search/2, install/2, uninstall/2, 
-         update/2, installed/1, get_config/0, set_config/1,
-         add_spec/3]).
+-export([main/1, search/1, install/1, uninstall/1, 
+         update/1, installed/0, get_config/0, set_config/1,
+         add_spec/2, available_packages/0]).
          
 -compile(export_all).
          
 -include("sutro.hrl").
+
+-define(DOWNLOAD_TIMEOUT, 8000).
     
 %%====================================================================
 %% main
@@ -18,12 +20,11 @@ main(Args) ->
 	    _ ->
 	        io:format("~n")
 	end.
-    
+	    
 %%====================================================================
 %% search
 %%====================================================================
-search(SearchStr, Opts) ->
-    sutro_setup:run(Opts),
+search(SearchStr) ->
     case SearchStr of
         "" -> [];
         _ ->
@@ -34,11 +35,10 @@ search(SearchStr, Opts) ->
 %%====================================================================
 %% install
 %%====================================================================
-install([Char|_]=PackageName, Opts) when is_integer(Char), is_list(Opts) ->
-    install([PackageName], Opts);
+install([Char|_]=PackageName) when is_integer(Char) ->
+    install([PackageName]);
 
-install(Packages, Opts) when is_list(Packages), is_list(Opts) ->
-    sutro_setup:run(Opts),
+install(Packages) when is_list(Packages) ->
     Specs = package_specs(Packages, []),
     Deps = expand_dependencies(Specs),
     do_install(Deps).
@@ -46,43 +46,54 @@ install(Packages, Opts) when is_list(Packages), is_list(Opts) ->
 %%====================================================================
 %% uninstall
 %%====================================================================
-uninstall([Char|_]=PackageName, Opts) when is_integer(Char), is_list(Opts) ->
-    uninstall([PackageName], Opts);
+uninstall([Char|_]=PackageName) when is_integer(Char) ->
+    uninstall([PackageName]);
 
-uninstall(Packages, Opts) when is_list(Packages), is_list(Opts) ->
-    sutro_setup:run(Opts),
+uninstall(Packages) when is_list(Packages) ->
     do_uninstall(Packages).
 
 %%====================================================================
 %% update
 %%====================================================================
-update([Char|_]=PackageName, Opts) when is_integer(Char), is_list(Opts) ->
-    update([PackageName], Opts);
+update([Char|_]=PackageName) when is_integer(Char) ->
+    update([PackageName]);
 
-update(Packages, Opts) when is_list(Packages), is_list(Opts) ->
-    sutro_setup:run(Opts),
+update(Packages) when is_list(Packages) ->
     do_update(Packages).
     
-update_sutro(Opts) ->
-    sutro_setup:run(Opts),
+update_sutro() ->
     do_update_sutro().
     
 %%====================================================================
 %% installed
 %%====================================================================
-installed(Opts) ->
-    sutro_setup:run(Opts),
+installed() ->
     installed_packages().
+
+%%====================================================================
+%% available
+%%====================================================================
+available_packages() ->
+    Filenames = files_from(get(spec_dir)),
+    lists:foldl(
+        fun(Filename, Acc) ->
+            Basename = filename:basename(Filename, ".spec"),
+            SpecFile = filename:join([get(spec_dir), Filename]),
+            case file:consult(SpecFile) of
+                {ok, Props} ->
+                    [{Basename, Props}|Acc];
+                Error ->
+                    ?EXIT("failed to read spec file ~s: ~p", [SpecFile, Error])
+            end
+        end, [], Filenames).
 
 %%====================================================================
 %% config
 %%====================================================================
 get_config() ->
-    sutro_setup:run([]),
     sutro_util:config_file().
     
 set_config(Values) ->
-    sutro_setup:run([]),
     Config = lists:foldl(
         fun({Key, Val}, Acc) ->
             io:format("--> setting config value~n"),
@@ -94,8 +105,7 @@ set_config(Values) ->
 %%====================================================================
 %% spec
 %%====================================================================    
-add_spec(PackageName, Props, Opts) ->
-    sutro_setup:run(Opts),
+add_spec(PackageName, Props) ->
     SpecFileName = filename:join([get(spec_dir), PackageName ++ ".spec"]),
     {ok, FD} = file:open(SpecFileName, [write]),
     [io:format(FD, "~p.~n", [Tuple]) || Tuple <- Props],
@@ -293,7 +303,7 @@ installed_packages() ->
         
 download_tarball(Url) ->
     io:format("--> fetching ~s~n", [Url]),
-    case (catch http:request(get, {Url, [{"User-Agent", "Grackle"}]}, [{timeout, 6000}], [{body_format, binary}])) of
+    case (catch http:request(get, {Url, [{"User-Agent", "Grackle"}]}, [{timeout, ?DOWNLOAD_TIMEOUT}], [{body_format, binary}])) of
         {ok,{{_,200,_},_,Bin}} ->
             Bin;
         {ok, {{_,404,_},_,_}} ->
