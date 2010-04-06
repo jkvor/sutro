@@ -42,7 +42,6 @@ add_config(Key, Val, Config) ->
             lists:keystore(Key, 1, Config, {Key, Val})
     end.
     
-allowed_multi(spec_dir) -> true;
 allowed_multi(_) -> false.
 
 defaults() ->

@@ -21,7 +21,12 @@ dispatch(["uninstall" | Args]) ->
     
 dispatch(["update" | Args]) ->
     {Packages, Opts} = collect_args(update, Args),
-    sutro:update(Packages, Opts);
+    case proplists:get_value(update_system, Opts) of
+        true ->
+            sutro:update_sutro(Opts);
+        false ->
+            sutro:update(Packages, Opts)
+    end;
     
 dispatch(["list" | Args]) ->
     {_, Opts} = collect_args(list, Args),
@@ -86,6 +91,7 @@ collect_args(Target, [Arg | Rest], Packages, Opts) ->
             collect_args(Target, Rest1, Packages, [{Opt, Vals1}|Opts])
 	end.
 
+parse_tag(update, "--system") -> {{update_system, true}, 0};
 parse_tag(config, "--set") -> {config_set, 2};
 parse_tag(_, "--verbose") -> {{verbose, true}, 0};
 parse_tag(_, "--spec-dir") -> {spec_dir, 1};

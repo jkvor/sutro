@@ -11,7 +11,7 @@ run(Opts) ->
             put(verbose, proplists:get_value(verbose, GOpts, false)),
             put(build_dir, proplists:get_value(build_dir, GOpts)),
             put(install_dir, proplists:get_value(install_dir, GOpts)),
-            put(spec_dirs, proplists:get_all_values(spec_dir, GOpts)),
+            put(spec_dir, proplists:get_value(spec_dir, GOpts)),
             put(has_setup_run, true)
     end.
     
@@ -39,9 +39,9 @@ ensure_setup(Opts) ->
         InstallDir -> ensure_dir(InstallDir)
     end,
     
-    case proplists:get_all_values(spec_dir, Opts) of
-        [] -> ?EXIT(".sutroconfig file is missing a spec_dir parameter", []);
-        Specs -> [ensure_dir(SpecDir) || SpecDir <- Specs]
+    case proplists:get_value(spec_dir, Opts) of
+        undefined -> ?EXIT(".sutroconfig file is missing a spec_dir parameter", []);
+        SpecDir -> ensure_dir(SpecDir)
     end, 
     
     ok.

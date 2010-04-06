@@ -1,6 +1,7 @@
 -module(sutro).
 -export([main/1, search/2, install/2, uninstall/2, 
          update/2, installed/1, get_config/0, set_config/1]).
+-compile(export_all).
          
 -include("sutro.hrl").
     
@@ -25,7 +26,7 @@ search(SearchStr, Opts) ->
         "" -> [];
         _ ->
             {ok, MP} = re:compile(SearchStr),
-            search_spec_dirs(MP, get(spec_dirs), [])
+            search_spec_dir(MP, get(spec_dir))
     end.
 
 %%====================================================================
@@ -60,6 +61,10 @@ update(Packages, Opts) when is_list(Packages), is_list(Opts) ->
     sutro_setup:run(Opts),
     do_update(Packages).
     
+update_sutro(Opts) ->
+    sutro_setup:run(Opts),
+    do_update_sutro().
+    
 %%====================================================================
 %% installed
 %%====================================================================
@@ -87,27 +92,23 @@ set_config(Values) ->
 %%====================================================================
 %% internal functions
 %%====================================================================
-search_spec_dirs(_, [], Acc) -> Acc;
-
-search_spec_dirs(Regexp, [SpecDir|Tail], Results) ->
+search_spec_dir(Regexp, SpecDir) ->
     Filenames = files_from(SpecDir),
-    Results1 =
-        lists:foldl(
-            fun(Filename, Acc) ->
-                Basename = filename:basename(Filename, ".spec"),
-                case re:run(Basename, Regexp) of
-                    nomatch -> Acc;
-                    _ ->
-                        SpecFile = filename:join([SpecDir, Filename]),
-                        case file:consult(SpecFile) of
-                            {ok, Props} ->
-                                [{Basename, Props}|Acc];
-                            Error ->
-                                ?EXIT("failed to read spec file ~s: ~p", [SpecFile, Error])
-                        end
-                end
-            end, Results, Filenames),
-    search_spec_dirs(Regexp, Tail, Results1).
+    lists:foldl(
+        fun(Filename, Acc) ->
+            Basename = filename:basename(Filename, ".spec"),
+            case re:run(Basename, Regexp) of
+                nomatch -> Acc;
+                _ ->
+                    SpecFile = filename:join([SpecDir, Filename]),
+                    case file:consult(SpecFile) of
+                        {ok, Props} ->
+                            [{Basename, Props}|Acc];
+                        Error ->
+                            ?EXIT("failed to read spec file ~s: ~p", [SpecFile, Error])
+                    end
+            end
+        end, [], Filenames).
         
 files_from(Dir) ->
     case file:list_dir(Dir) of
@@ -120,7 +121,7 @@ files_from(Dir) ->
 package_specs([], Acc) -> Acc;
     
 package_specs([PackageName|Tail], Acc) ->
-    case package_specs1(PackageName, get(spec_dirs)) of
+    case package_specs1(PackageName, [get(spec_dir)]) of
         undefined ->
             package_specs(Tail, Acc);
         {_, Props} ->
@@ -180,7 +181,7 @@ do_install([{PackageName, Props}|Tail]) ->
         	test({PackageName, Props}),
         	deploy({PackageName, [{hash, Hash}|Props]});
         {_Filename, _InstalledProps} ->
-            io:format("--> skipping ~s: package is already installed", [PackageName])
+            io:format("--> skipping ~s: package is already installed~n", [PackageName])
     end,
 	do_install(Tail).
 
@@ -205,7 +206,7 @@ do_update([PackageName|Tail]) ->
         undefined ->
             io:format("--> skipping ~s: not installed~n", [PackageName]);
         {SpecFileName, InstalledProps} ->
-            case package_specs1(PackageName, get(spec_dirs)) of
+            case package_specs1(PackageName, [get(spec_dir)]) of
                 {_Filename, Props} ->
                     Url = proplists:get_value(url, Props),
                     Bin = download_tarball(Url),
@@ -231,6 +232,42 @@ do_update([PackageName|Tail]) ->
             end
     end,
     do_update(Tail).
+    
+do_update_sutro() ->
+    SpecDir = get(spec_dir),
+    Url = "http://github.com/JacobVorreuter/sutro/tarball/master",
+    Bin = download_tarball(Url),
+    case erl_tar:extract({binary, Bin}, [compressed, memory]) of
+        {ok, Files} -> 
+            [begin
+                case filename:split(Filename) of
+                    [_, "sutro"] ->
+                        File = 
+                    		case os:find_executable("sutro") of
+                    			false ->
+                    				case filelib:is_regular("sutro") of
+                    					true -> "./sutro";
+                    					fasle -> exit("failed to find sutro executable to replace")
+                    				end;
+                    			F -> F
+                    		end,
+                    		
+                    		case file:write_file(File, Contents) of
+                				ok ->
+                					io:format("--> updated sutro (~s) to latest version~n", [File]);
+                				{error, Reason} ->
+                					exit(lists:flatten(io_lib:format("failed to overwrite sutro executable ~s: ~p~n", [File, Reason])))
+                			end;
+                    [_, "specs", SpecName] ->
+                        io:format("--> writing spec file: ~s~n", [SpecName]),
+                        file:write_file(filename:join([SpecDir, SpecName]), Contents);
+                    _ ->
+                        ok
+                end
+            end || {Filename, Contents} <- Files];
+        {error, Reason} ->
+            ?EXIT("failed to extract tarball: ~p", [Reason])
+    end.
     
 installed_packages() ->
     [begin
