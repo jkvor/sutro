@@ -50,6 +50,12 @@ dispatch(["config" | Args]) ->
     {_, Opts} = collect_args(config, Args),
     sutro:set_config([{list_to_atom(Key), Val} || {config_set, [Key, Val]} <- Opts]);
     
+dispatch(["spec" | Args]) ->
+    {_, Opts} = collect_args(spec, Args),
+    [begin
+        sutro:add_spec(PackageName, [{url, Url}], Opts)
+    end || {add_spec, [PackageName, Url]} <- Opts];
+    
 dispatch(_) ->
     io:format("Usage: sutro commands~n~n"),
     io:format("    search <search string> {global options}~n~n"),
@@ -93,6 +99,7 @@ collect_args(Target, [Arg | Rest], Packages, Opts) ->
 
 parse_tag(update, "--system") -> {{update_system, true}, 0};
 parse_tag(config, "--set") -> {config_set, 2};
+parse_tag(spec, "--add") -> {add_spec, 2};
 parse_tag(_, "--verbose") -> {{verbose, true}, 0};
 parse_tag(_, "--spec-dir") -> {spec_dir, 1};
 parse_tag(_, "--" ++ Cmd) -> {list_to_atom(Cmd), 1};

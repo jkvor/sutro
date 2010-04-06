@@ -1,6 +1,8 @@
 -module(sutro).
 -export([main/1, search/2, install/2, uninstall/2, 
-         update/2, installed/1, get_config/0, set_config/1]).
+         update/2, installed/1, get_config/0, set_config/1,
+         add_spec/3]).
+         
 -compile(export_all).
          
 -include("sutro.hrl").
@@ -89,6 +91,18 @@ set_config(Values) ->
         end, sutro_util:config_file(), Values),
     sutro_util:write_config(sutro_util:config_path(), Config).
     
+%%====================================================================
+%% spec
+%%====================================================================    
+add_spec(PackageName, Props, Opts) ->
+    sutro_setup:run(Opts),
+    SpecFileName = filename:join([get(spec_dir), PackageName ++ ".spec"]),
+    {ok, FD} = file:open(SpecFileName, [write]),
+    [io:format(FD, "~p.~n", [Tuple]) || Tuple <- Props],
+    file:close(FD),
+    io:format("--> wrote spec file ~s~n", [SpecFileName]),
+    ok.
+
 %%====================================================================
 %% internal functions
 %%====================================================================
