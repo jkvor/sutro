@@ -1,0 +1,1 @@
+{url, "http://github.com/JacobVorreuter/emysql/tarball/master"}.

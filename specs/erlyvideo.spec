@@ -1,0 +1,1 @@
+{url, "http://github.com/erlyvideo/erlyvideo/tarball/master"}.
