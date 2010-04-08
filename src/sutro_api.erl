@@ -5,7 +5,7 @@
 dispatch(["search" | Args]) ->
     {SearchStr, _Opts} = collect_args(search, Args),
     Packages = sutro:search(SearchStr),
-    io:format("--> found ~w packages~n", [length(Packages)]),
+    io:format("--> found ~w package(s)~n", [length(Packages)]),
     [begin
         io:format("--> ~s~n", [PackageName]),
         io:format("      ~s~n", [proplists:get_value(url, Props, "")])

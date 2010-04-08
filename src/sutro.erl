@@ -348,13 +348,13 @@ prebuild({ProjectName, Props}) ->
 build({ProjectName, Props}) ->
 	case proplists:get_value(build_command, Props) of
 		undefined ->
-		    case filelib:is_regular("Emakefile") of
+		    case filelib:is_regular("Makefile") of
 		        true ->
-		            build1(ProjectName, "erl -make");
+		            build1(ProjectName, "make");
 		        false ->
-		            case filelib:is_regular("Makefile") of
+		            case filelib:is_regular("Emakefile") of
         				true ->
-        					build1(ProjectName, "make");
+        					build1(ProjectName, "erl -make");
         				false ->
         					case os:find_executable("rebar") of
         						false ->

@@ -1,8 +1,8 @@
 ### Install
 
-	curl "http://github.com/JacobVorreuter/sutro/raw/master/sutro" > sutro
-	chmod +x sutro
-	sudo mv sutro /usr/local/bin/
+	$ curl "http://github.com/JacobVorreuter/sutro/raw/master/sutro" > sutro
+	$ chmod +x sutro
+	$ sudo mv sutro /usr/local/bin/
 
 ### Config
 
